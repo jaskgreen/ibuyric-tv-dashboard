@@ -49,7 +49,7 @@ function render() {
     return '<div class="row"><div class="rank">' + (i + 1) + '</div>' + avatar(r) +
       '<div><div class="nm">' + esc(r.name) + '</div><div class="track"><i style="width:' + (r.sold / max) * 100 + '%"></i></div></div>' +
       '<div class="sd">' + r.sold + '</div><div class="rv">' + (r.revenue == null ? '' : money(r.revenue)) + '</div></div>';
-  }).join('') : '<div class="empty">No closed deals yet this period — first one gets the trophy 🏆</div>';
+  }).join('') : '<div class="empty">No credited deals this period — tag a lead spoke-name to credit a rep 🏆</div>';
   var u = new Date(data.updatedAt);
   $('foot').textContent = 'Updated ' + ((u.getHours() % 12) || 12) + ':' + ('0' + u.getMinutes()).slice(-2) + (u.getHours() < 12 ? ' AM' : ' PM');
 }

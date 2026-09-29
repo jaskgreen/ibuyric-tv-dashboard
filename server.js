@@ -28,10 +28,10 @@ async function build() {
   for (const [key, { label, start }] of Object.entries(R)) {
     const sold = deals.filter(d => inRange(d.soldDate, start));
     const byRep = {};
-    sold.forEach(d => {
-      byRep[d.rep] = byRep[d.rep] || { name: d.rep, sold: 0, revenue: 0 };
-      byRep[d.rep].sold++; byRep[d.rep].revenue += d.revenue || 0;
-    });
+    sold.forEach(d => (d.reps || []).forEach(name => {      // every rep who spoke with the lead gets full credit
+      byRep[name] = byRep[name] || { name, sold: 0, revenue: 0 };
+      byRep[name].sold++; byRep[name].revenue += d.revenue || 0;
+    }));
     const hasRevenue = sold.some(d => d.revenue !== null);
     out.periods[key] = {
       label,

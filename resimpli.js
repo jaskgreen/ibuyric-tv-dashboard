@@ -56,6 +56,21 @@ async function fetchDetails(id) {
   return j.data && j.data.leadData;
 }
 
+// Reps are credited only when their "spoke with the seller" tag is on the lead.
+// REP_TAGS = "tag label=Rep Name,..." (case-insensitive). UNTAGGED_FALLBACK=role credits the assigned role instead.
+const REP_TAGS = {};
+(process.env.REP_TAGS || 'spoke-david=David Hughes,spoke-derrious=Derrious Clayton,spoke-ryan=Ryan Rice')
+  .split(',').forEach(p => { const [t, n] = p.split('='); if (t && n) REP_TAGS[t.trim().toLowerCase()] = n.trim(); });
+const FALLBACK_ROLE = process.env.UNTAGGED_FALLBACK === 'role';
+const repsOf = d => {
+  const names = [];
+  (d.tags || []).forEach(t => {
+    const n = REP_TAGS[String((t && t.label) || t).trim().toLowerCase()];
+    if (n && !names.includes(n)) names.push(n);
+  });
+  if (!names.length && FALLBACK_ROLE) names.push(repOf(d));
+  return names;
+};
 const repOf = obj => {
   const id = REP_ROLE && obj.assignUser && obj.assignUser[REP_ROLE] && obj.assignUser[REP_ROLE][0];
   return id ? (USERS[id] || 'Rep ' + String(id).slice(-4)) : 'Team';
@@ -102,7 +117,7 @@ async function getData() {
         ? SOLD_STATUS_IDS.includes(d.transactionMainStatusId) || SOLD_STATUS_IDS.includes(d.mainStatusId)
         : !!(a.closingDate && a.closingDate <= Date.now());
       deals.push({
-        rep: repOf(d),
+        reps: repsOf(d),
         contractDate: iso(a.underContractDate),
         soldDate: sold ? iso(a.closingDate) : null,
         revenue: sold ? Number(a.assignmentFee) || 0 : 0
@@ -121,7 +136,7 @@ function demo() {
   for (let i = 0; i < 90; i++) {
     const c = now - Math.random() * 300 * day, sold = Math.random() > 0.35;
     deals.push({
-      rep: reps[Math.floor(Math.random() * reps.length)],
+      reps: [reps[Math.floor(Math.random() * reps.length)]],
       contractDate: new Date(c).toISOString(),
       soldDate: sold ? new Date(c + 20 * day).toISOString() : null,
       revenue: sold ? 8000 + Math.round(Math.random() * 22000) : 0
