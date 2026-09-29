@@ -69,10 +69,22 @@ app.get('/api/stats', auth, (req, res) => {
 app.get('/api/setup', auth, (req, res) => res.json(getSetupInfo()));
 // Page is rendered on the server (all four periods, rotated by CSS) so it works on signage players that block scripts.
 const { page } = require('./render');
+// Signage players may reload the page mid-cycle (e.g. every 30s), which would restart on "This Week" every time.
+// Remember when each screen last loaded and start the new load where its animation would have been.
+const screens = new Map();
+function startSlot(req) {
+  const key = (req.headers['x-forwarded-for'] || req.ip || '') + '|' + (req.headers['user-agent'] || '');
+  const now = Date.now(), last = screens.get(key);
+  const pos = last ? ((last.pos + (now - last.t) / 1000) % 60) : 0;
+  const slot = Math.round(pos / 15) % 4;
+  screens.set(key, { pos: slot * 15, t: now });
+  if (screens.size > 200) screens.delete(screens.keys().next().value);
+  return slot;
+}
 app.get(['/', '/index.html'], (req, res) => {
   const t = process.env.DASH_TOKEN, ok = cache.body && (!t || req.query.token === t);
   const period = req.query.period || req.query['amp;period'];      // tolerate "&amp;" mangling by signage software
-  res.set('Cache-Control', 'no-store').type('html').send(page(ok ? cache.body : null, period));
+  res.set('Cache-Control', 'no-store').type('html').send(page(ok ? cache.body : null, period, startSlot(req)));
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => console.log('I Buy RIC TV dashboard on :' + PORT));

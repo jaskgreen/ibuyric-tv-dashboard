@@ -5,7 +5,10 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const money = n => '$' + num(n);
 
-function panel(p, i, solo) {
+function panel(p, i, solo, start) {
+  const d = (15 * start - 15 * i + 60) % 60;                       // where this panel is in its 60s animation at page load
+  const dl = solo ? '' : ` style="-webkit-animation-delay:-${d}s;animation-delay:-${d}s"`;
+  const bl = solo ? '' : ` style="-webkit-animation-delay:-${d}s;animation-delay:-${d}s"`;
   const max = Math.max(1, ...p.leaderboard.map(r => r.sold));
   const dots = KEYS.map((_, j) => `<i${j === i ? ' class="on"' : ''}></i>`).join('');
   const rows = p.leaderboard.length ? p.leaderboard.map((r, k) => {
@@ -14,12 +17,12 @@ function panel(p, i, solo) {
       <div><div class="nm">${esc(r.name)}</div><div class="track"><i style="width:${(r.sold / max) * 100}%"></i></div></div>
       <div class="sd">${r.sold}</div><div class="rv">${r.revenue == null ? '' : money(r.revenue)}</div></div>`;
   }).join('') : '<div class="empty">No credited deals this period</div>';
-  return `<section class="panel p${i}${solo ? ' solo' : ''}">
+  return `<section class="panel p${i}${solo ? ' solo' : ''}"${dl}>
   <header>
     <div class="brand"><span class="mark">▲</span><span class="name">I BUY <b>RIC</b></span><span class="tag">SALES LEADERBOARD</span></div>
     <div class="period"><div class="pl">${esc(p.label)}</div><div class="dots">${dots}</div></div>
   </header>
-  <div class="bar"><i></i></div>
+  <div class="bar"><i${bl}></i></div>
   <main>
     <div class="kpis">
       <div class="card"><div class="k">QUALIFIED LEADS</div><div class="v">${num(p.qualifiedLeads)}</div></div>
@@ -33,7 +36,8 @@ function panel(p, i, solo) {
 </section>`;
 }
 
-function page(body, period) {
+function page(body, period, start) {
+  start = start || 0;
   const head = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="refresh" content="${body ? 300 : 15}">
@@ -44,7 +48,7 @@ function page(body, period) {
   const upd = new Date(body.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
   const solo = KEYS.indexOf(period);
   const list = solo >= 0 ? [solo] : [0, 1, 2, 3];
-  return head + list.map(i => panel({ ...body.periods[KEYS[i]], updated: upd }, i, solo >= 0)).join('') + '</body></html>';
+  return head + list.map(i => panel({ ...body.periods[KEYS[i]], updated: upd }, i, solo >= 0, start)).join('') + '</body></html>';
 }
 
 module.exports = { page };
