@@ -3,7 +3,9 @@ var KEYS = ['week', 'month', 'quarter', 'year'];
 var ROTATE_MS = 15000, POLL_MS = 30000;
 var m = /[?&]token=([^&]*)/.exec(location.search);
 var token = m ? m[1] : '';
-var data = null, idx = 0;
+var pm = /[?&]period=(week|month|quarter|year)/.exec(location.search);
+var fixed = pm ? KEYS.indexOf(pm[1]) : -1;      // ?period=month shows one period, no rotation (for playlist widgets)
+var data = window.__DATA__ || null, idx = fixed >= 0 ? fixed : 0;
 function $(id) { return document.getElementById(id); }
 function money(n) { return '$' + fmt(Math.round(n)); }
 function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -79,7 +81,9 @@ function rotate() {
   setTimeout(function () { idx = (idx + 1) % KEYS.length; render(); s.className = ''; restartBar(); }, 450);
 }
 
-poll(); restartBar();
+if (data) render();
+poll();
 setInterval(poll, POLL_MS);
-setInterval(rotate, ROTATE_MS);
-setTimeout(function () { location.reload(); }, 6 * 3600 * 1000); // safety refresh every 6h
+if (fixed < 0) { restartBar(); setInterval(rotate, ROTATE_MS); }
+else $('bar').style.display = 'none';
+setTimeout(function () { location.reload(); }, (fixed >= 0 ? 5 * 60 : 6 * 3600) * 1000); // safety refresh
