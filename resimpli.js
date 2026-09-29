@@ -13,7 +13,7 @@ const KEY = process.env.RESIMPLI_API_KEY;
 const HEADER = process.env.RESIMPLI_AUTH_HEADER || 'Authorization';
 const REP_ROLE = process.env.REP_ROLE_ID || '';                 // which assignUser role key = "sales rep"
 const SOLD_STATUS_IDS = (process.env.SOLD_STATUS_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
-const SKIP_STATUS_TITLES = (process.env.SKIP_STATUS_TITLES || 'New Leads,discovery,Dead Lead')
+const SKIP_STATUS_TITLES = (process.env.SKIP_STATUS_TITLES || 'New Leads,New,discovery,Dead Lead')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const DETAIL_LOOKBACK_DAYS = Number(process.env.DETAIL_LOOKBACK_DAYS || 400);   // covers "This Year" + buffer
 const MAX_DETAIL_CALLS = Number(process.env.MAX_DETAIL_CALLS || 3000);         // safety cap per refresh
@@ -108,7 +108,7 @@ async function getData() {
         revenue: sold ? Number(a.assignmentFee) || 0 : 0
       });
     }
-    await sleep(detailCalls % 80 === 0 ? 60000 : 650);                // pause every 80 calls to respect 100/min
+    await sleep(700);                                                   // ~85 calls/min, under the 100/min cap
   }
   setupInfo = { totalLeads: rows.length, detailCallsThisRefresh: detailCalls, statusCounts, rolesAndUsers: roles };
   return { leads, deals };
