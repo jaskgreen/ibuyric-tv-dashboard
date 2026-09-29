@@ -67,12 +67,12 @@ app.get('/api/stats', auth, (req, res) => {
   res.set('Cache-Control', 'no-store').json(cache.body);
 });
 app.get('/api/setup', auth, (req, res) => res.json(getSetupInfo()));
-// Serve the page with the latest numbers embedded, so it still shows data if the TV player blocks XHR.
-const page = () => fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
+// Page is rendered on the server (all four periods, rotated by CSS) so it works on signage players that block scripts.
+const { page } = require('./render');
 app.get(['/', '/index.html'], (req, res) => {
   const t = process.env.DASH_TOKEN, ok = cache.body && (!t || req.query.token === t);
-  const inject = ok ? '<script>window.__DATA__=' + JSON.stringify(cache.body).replace(/</g, '\\u003c') + ';</script>' : '';
-  res.set('Cache-Control', 'no-store').type('html').send(page().replace('<!--DATA-->', inject));
+  const period = req.query.period || req.query['amp;period'];      // tolerate "&amp;" mangling by signage software
+  res.set('Cache-Control', 'no-store').type('html').send(page(ok ? cache.body : null, period));
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => console.log('I Buy RIC TV dashboard on :' + PORT));

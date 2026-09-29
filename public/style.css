@@ -35,3 +35,19 @@ footer{color:var(--dim);font-size:1rem;text-align:right;margin-top:.8rem}
 .empty{color:var(--dim);font-size:2rem;padding:2rem 0}
 /* older signage web views: flex "gap" unsupported, use margins */
 .brand>*+*{margin-left:1.2rem}.dots i+i{margin-left:.6rem}main>*+*{margin-top:1.6rem}
+/* server-rendered, CSS-only rotation: 4 panels x 15s = 60s cycle */
+body.tv{display:block;padding:0}
+.panel{position:absolute;top:0;left:0;right:0;bottom:0;padding:2rem 3rem;display:flex;flex-direction:column;opacity:0;z-index:1;-webkit-animation:slot 60s linear infinite;animation:slot 60s linear infinite}
+.panel.p0{-webkit-animation-delay:0s;animation-delay:0s}
+.panel.p1{-webkit-animation-delay:-45s;animation-delay:-45s}
+.panel.p2{-webkit-animation-delay:-30s;animation-delay:-30s}
+.panel.p3{-webkit-animation-delay:-15s;animation-delay:-15s}
+.panel.p1 .bar i{-webkit-animation-delay:-45s;animation-delay:-45s}
+.panel.p2 .bar i{-webkit-animation-delay:-30s;animation-delay:-30s}
+.panel.p3 .bar i{-webkit-animation-delay:-15s;animation-delay:-15s}
+.panel .bar i{width:0;-webkit-animation:barfill 60s linear infinite;animation:barfill 60s linear infinite}
+.panel.solo{opacity:1;-webkit-animation:none;animation:none}.panel.solo .bar{visibility:hidden}
+@-webkit-keyframes slot{0%{opacity:0}1%{opacity:1}24%{opacity:1}25%{opacity:0}100%{opacity:0}}
+@keyframes slot{0%{opacity:0}1%{opacity:1}24%{opacity:1}25%{opacity:0}100%{opacity:0}}
+@-webkit-keyframes barfill{0%{width:0}25%{width:100%}100%{width:100%}}
+@keyframes barfill{0%{width:0}25%{width:100%}100%{width:100%}}
