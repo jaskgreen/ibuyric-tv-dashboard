@@ -28,7 +28,8 @@ async function build() {
   for (const [key, { label, start }] of Object.entries(R)) {
     const sold = deals.filter(d => inRange(d.soldDate, start));
     const byRep = {};
-    sold.forEach(d => (d.reps || []).forEach(name => {      // every rep who spoke with the lead gets full credit
+    const UNCLAIMED = 'Team UnClaimed';                       // deals with no rep tag: flags work left to do in REsimpli
+    sold.forEach(d => (d.reps && d.reps.length ? d.reps : [UNCLAIMED]).forEach(name => {   // every tagged rep gets full credit
       byRep[name] = byRep[name] || { name, sold: 0, revenue: 0 };
       byRep[name].sold++; byRep[name].revenue += d.revenue || 0;
     }));
