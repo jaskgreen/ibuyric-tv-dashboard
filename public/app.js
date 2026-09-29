@@ -1,61 +1,85 @@
-const KEYS = ['week', 'month', 'quarter', 'year'];
-const ROTATE_MS = 15000, POLL_MS = 30000;
-const token = new URLSearchParams(location.search).get('token') || '';
-let data = null, idx = 0;
-const $ = id => document.getElementById(id);
-const money = n => '$' + Math.round(n).toLocaleString('en-US');
-$('dots').innerHTML = KEYS.map(() => '<i></i>').join('');
+// Written in plain ES5 (var, XHR, no template literals/spread) so it runs on older signage web views.
+var KEYS = ['week', 'month', 'quarter', 'year'];
+var ROTATE_MS = 15000, POLL_MS = 30000;
+var m = /[?&]token=([^&]*)/.exec(location.search);
+var token = m ? m[1] : '';
+var data = null, idx = 0;
+function $(id) { return document.getElementById(id); }
+function money(n) { return '$' + fmt(Math.round(n)); }
+function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+var dots = '';
+for (var i = 0; i < KEYS.length; i++) dots += '<i></i>';
+$('dots').innerHTML = dots;
 
-function countUp(el, to, fmt = v => Math.round(v).toLocaleString('en-US'), ms = 1200) {
-  const from = Number(el.dataset.v || 0); el.dataset.v = to;
-  const t0 = performance.now();
-  (function step(t) {
-    const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3);
-    el.textContent = fmt(from + (to - from) * e);
-    if (p < 1) requestAnimationFrame(step);
-  })(t0);
+var raf = window.requestAnimationFrame || function (f) { return setTimeout(function () { f(new Date().getTime()); }, 33); };
+function now() { return window.performance && performance.now ? performance.now() : new Date().getTime(); }
+
+function countUp(el, to, f, ms) {
+  f = f || fmt; ms = ms || 1200;
+  var from = Number(el.getAttribute('data-v') || 0);
+  el.setAttribute('data-v', to);
+  var t0 = now();
+  (function step() {
+    var p = Math.min(1, (now() - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = f(from + (to - from) * e);
+    if (p < 1) raf(step);
+  })();
 }
 
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function avatar(r) {
-  const ini = r.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  if (!r.photo) return `<div class="av">${ini}</div>`;
-  return `<img class="av" src="${esc(r.photo)}" alt="" onerror="this.outerHTML='<div class=\\'av\\'>${ini}</div>'">`;
+  var ini = r.name.split(' ').map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase();
+  if (!r.photo) return '<div class="av">' + ini + '</div>';
+  return '<img class="av" src="' + esc(r.photo) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>' + ini + '</div>\'">';
 }
 
 function render() {
   if (!data) return;
-  const p = data.periods[KEYS[idx]];
+  var p = data.periods[KEYS[idx]];
   $('periodLabel').textContent = p.label;
-  [...$('dots').children].forEach((d, i) => d.classList.toggle('on', i === idx));
+  var d = $('dots').children;
+  for (var i = 0; i < d.length; i++) d[i].className = i === idx ? 'on' : '';
   countUp($('qualifiedLeads'), p.qualifiedLeads);
   countUp($('underContract'), p.underContract);
   countUp($('sold'), p.sold);
-  if (p.revenue == null) { $('revenue').textContent = '—'; $('revenue').dataset.v = 0; } else countUp($('revenue'), p.revenue, money);
-  const max = Math.max(1, ...p.leaderboard.map(r => r.sold));
-  $('rows').innerHTML = p.leaderboard.length ? p.leaderboard.map((r, i) => `
-    <div class="row"><div class="rank">${i + 1}</div>${avatar(r)}
-      <div><div class="nm">${esc(r.name)}</div><div class="track"><i style="width:${(r.sold / max) * 100}%"></i></div></div>
-      <div class="sd">${r.sold}</div><div class="rv">${r.revenue == null ? '' : money(r.revenue)}</div></div>`).join('')
-    : '<div class="empty">No closed deals yet this period — first one gets the trophy 🏆</div>';
-  $('foot').textContent = 'Updated ' + new Date(data.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (p.revenue == null) { $('revenue').textContent = '—'; $('revenue').setAttribute('data-v', 0); } else countUp($('revenue'), p.revenue, money);
+  var max = 1;
+  p.leaderboard.forEach(function (r) { if (r.sold > max) max = r.sold; });
+  $('rows').innerHTML = p.leaderboard.length ? p.leaderboard.map(function (r, i) {
+    return '<div class="row"><div class="rank">' + (i + 1) + '</div>' + avatar(r) +
+      '<div><div class="nm">' + esc(r.name) + '</div><div class="track"><i style="width:' + (r.sold / max) * 100 + '%"></i></div></div>' +
+      '<div class="sd">' + r.sold + '</div><div class="rv">' + (r.revenue == null ? '' : money(r.revenue)) + '</div></div>';
+  }).join('') : '<div class="empty">No closed deals yet this period — first one gets the trophy 🏆</div>';
+  var u = new Date(data.updatedAt);
+  $('foot').textContent = 'Updated ' + ((u.getHours() % 12) || 12) + ':' + ('0' + u.getMinutes()).slice(-2) + (u.getHours() < 12 ? ' AM' : ' PM');
 }
 
-function restartBar() { const b = $('bar'); b.classList.remove('run'); void b.offsetWidth; b.classList.add('run'); }
+function restartBar() {
+  var b = $('bar');
+  b.className = '';
+  void b.offsetWidth;
+  b.className = 'run';
+}
 
-async function poll() {           // silent: updates numbers in place, no reload
+function poll() {                 // silent: updates numbers in place, no reload
   try {
-    const r = await fetch('/api/stats?token=' + encodeURIComponent(token), { cache: 'no-store' });
-    if (r.ok) { data = await r.json(); render(); }
+    var x = new XMLHttpRequest();
+    x.open('GET', '/api/stats?token=' + encodeURIComponent(token) + '&_=' + new Date().getTime(), true);
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4 || x.status !== 200) return;
+      try { data = JSON.parse(x.responseText); render(); } catch (e) { /* keep last good data */ }
+    };
+    x.send();
   } catch (e) { /* keep showing last good data */ }
 }
 
 function rotate() {
-  const m = $('stage'); m.classList.add('out');
-  setTimeout(() => { idx = (idx + 1) % KEYS.length; render(); m.classList.remove('out'); restartBar(); }, 450);
+  var s = $('stage');
+  s.className = 'out';
+  setTimeout(function () { idx = (idx + 1) % KEYS.length; render(); s.className = ''; restartBar(); }, 450);
 }
 
-poll().then(restartBar);
+poll(); restartBar();
 setInterval(poll, POLL_MS);
 setInterval(rotate, ROTATE_MS);
-setTimeout(() => location.reload(), 6 * 3600 * 1000); // safety refresh every 6h to clear any browser memory creep
+setTimeout(function () { location.reload(); }, 6 * 3600 * 1000); // safety refresh every 6h
